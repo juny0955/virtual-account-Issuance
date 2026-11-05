@@ -41,6 +41,24 @@ class BulkVaControllerTest {
     }
 
     @Test
+    void rejectsInvalidRequestsBeforeCallingService() throws Exception {
+        for (String body : List.of(
+            "{}",
+            "{\"orgCd\":\" \",\"bankCodes\":[\"901\"],\"qty\":1}",
+            "{\"orgCd\":\"TOOLONG\",\"bankCodes\":[\"901\"],\"qty\":1}",
+            "{\"orgCd\":\"T0001\",\"bankCodes\":[],\"qty\":1}",
+            "{\"orgCd\":\"T0001\",\"bankCodes\":[null],\"qty\":1}",
+            "{\"orgCd\":\"T0001\",\"bankCodes\":[\"901\",\"901\"],\"qty\":1}",
+            "{\"orgCd\":\"T0001\",\"bankCodes\":[\"901\"],\"qty\":0}",
+            "{\"orgCd\":\"T0001\",\"bankCodes\":[\"901\"],\"qty\":-1}",
+            "{\"orgCd\":\"T0001\",\"bankCodes\":[" + "\"901\",".repeat(20) + "\"902\"],\"qty\":1}")) {
+            mvc.perform(post("/api/v1/bulk").contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("INVALID_REQUEST"));
+        }
+        verifyNoInteractions(repository);
+    }
+
+    @Test
     void rejectsUnknownOrganizationOrBank() throws Exception {
         for (String body : List.of(
             "{\"orgCd\":\"T9999\",\"bankCodes\":[\"901\"],\"qty\":1}",

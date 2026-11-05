@@ -1,5 +1,6 @@
 package dev.junyoung.vai.api.controller;
 
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -18,7 +19,7 @@ public class BulkVaController {
 	private final BulkVaService service;
 
 	@PostMapping
-	public ResponseEntity<Void> issue(@RequestBody IssueBulkVaRequest request) {
+	public ResponseEntity<Void> issue(@Valid @RequestBody IssueBulkVaRequest request) {
 		service.issue(request);
 		return ResponseEntity.accepted().build();
 	}

@@ -27,9 +27,19 @@ class GlobalExceptionHandlerTest {
 	}
 
 	@Test
+	void rejectsInvalidGeneralRequestsBeforeCallingService() throws Exception {
+		for (String body : java.util.List.of("{}", "{\"orgCd\":\"T0001\",\"bankCodes\":[\"901\",\"901\"]}",
+			"{\"orgCd\":\"T0001\",\"bankCodes\":[\"    \"]}")) {
+			mvc.perform(post("/api/v1/general").contentType(MediaType.APPLICATION_JSON).content(body))
+				.andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("INVALID_REQUEST"));
+		}
+		verifyNoInteractions(service);
+	}
+
+	@Test
 	void returnsConflictWithReason() throws Exception {
 		when(service.issue(any())).thenThrow(new VaException(ErrorCode.AVAILABLE_ACCOUNT_SHORTAGE, "사용 가능한 가상계좌가 부족합니다: 901"));
-		mvc.perform(post("/api/v1/general").contentType(MediaType.APPLICATION_JSON).content("{}"))
+		mvc.perform(post("/api/v1/general").contentType(MediaType.APPLICATION_JSON).content("{\"orgCd\":\"T0001\",\"bankCodes\":[\"901\"]}"))
 			.andExpect(status().isConflict())
 			.andExpect(jsonPath("$.detail").value("사용 가능한 가상계좌가 부족합니다: 901"))
 			.andExpect(jsonPath("$.code").value("AVAILABLE_ACCOUNT_SHORTAGE"));
@@ -52,7 +62,7 @@ class GlobalExceptionHandlerTest {
 	@Test
 	void hidesUnexpectedExceptionDetails() throws Exception {
 		when(service.issue(any())).thenThrow(new IllegalStateException("secret"));
-		mvc.perform(post("/api/v1/general").contentType(MediaType.APPLICATION_JSON).content("{}"))
+		mvc.perform(post("/api/v1/general").contentType(MediaType.APPLICATION_JSON).content("{\"orgCd\":\"T0001\",\"bankCodes\":[\"901\"]}"))
 			.andExpect(status().isInternalServerError())
 			.andExpect(jsonPath("$.detail").value("서버 오류가 발생했습니다"));
 	}
