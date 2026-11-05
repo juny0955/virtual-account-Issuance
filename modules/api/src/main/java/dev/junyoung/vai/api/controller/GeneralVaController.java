@@ -7,18 +7,18 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import dev.junyoung.vai.api.controller.dto.IssueGeneralVaRequest;
+import dev.junyoung.vai.api.service.GeneralVaService;
+import dev.junyoung.vai.api.service.result.IssueResult;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 
 @RestController
 @RequestMapping("/api/v1/general")
 @RequiredArgsConstructor
-@Slf4j
 public class GeneralVaController {
+    private final GeneralVaService service;
 
-	@PostMapping
-	public ResponseEntity<?> issue(@RequestBody IssueGeneralVaRequest request) {
-		log.info("일반 발급 요청 {}", request.toString());
-		return ResponseEntity.ok().build();
-	}
+    @PostMapping
+    public ResponseEntity<IssueResult> issue(@RequestBody IssueGeneralVaRequest request) {
+        return ResponseEntity.ok(service.issue(request));
+    }
 }
