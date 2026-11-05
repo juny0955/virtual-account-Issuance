@@ -20,7 +20,9 @@ repositories {
 
 dependencies {
     implementation(project(":persistence"))
+    implementation("org.springframework:spring-tx")
     implementation("org.springframework.boot:spring-boot-starter-webmvc")
+    implementation("org.springframework.boot:spring-boot-starter-validation")
     compileOnly("org.projectlombok:lombok")
     developmentOnly("org.springframework.boot:spring-boot-devtools")
     annotationProcessor("org.projectlombok:lombok")
