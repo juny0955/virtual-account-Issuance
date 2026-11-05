@@ -8,17 +8,18 @@ import org.springframework.web.bind.annotation.RestController;
 
 import dev.junyoung.vai.api.controller.dto.IssueBulkVaRequest;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import dev.junyoung.vai.api.service.BulkVaService;
 
 @RestController
 @RequestMapping("/api/v1/bulk")
 @RequiredArgsConstructor
-@Slf4j
 public class BulkVaController {
 
+	private final BulkVaService service;
+
 	@PostMapping
-	public ResponseEntity<?> issue(@RequestBody IssueBulkVaRequest request) {
-		log.info("대량 발급 요청 {}", request.toString());
+	public ResponseEntity<Void> issue(@RequestBody IssueBulkVaRequest request) {
+		service.issue(request);
 		return ResponseEntity.accepted().build();
 	}
 }

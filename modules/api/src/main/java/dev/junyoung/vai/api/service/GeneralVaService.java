@@ -37,7 +37,7 @@ public class GeneralVaService {
 
 		Map<String, String> accounts = new HashMap<>();
 		List<VaAlloc> allocations = new ArrayList<>();
-		for (String bankCode : request.bankCodes().stream().sorted().toList()) {
+		for (String bankCode : request.bankCodes()) {
 			Va va = vaRepository.allocateAvailable(bankCode)
 				.orElseThrow(() -> new VaException(ErrorCode.AVAILABLE_ACCOUNT_SHORTAGE,
 					ErrorCode.AVAILABLE_ACCOUNT_SHORTAGE.display() + ": " + bankCode));

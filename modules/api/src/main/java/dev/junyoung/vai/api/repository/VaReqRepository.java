@@ -2,6 +2,9 @@ package dev.junyoung.vai.api.repository;
 
 import static dev.junyoung.vai.persistence.jooq.Tables.*;
 
+import java.util.HashSet;
+import java.util.List;
+
 import org.jooq.DSLContext;
 import org.springframework.stereotype.Repository;
 
@@ -42,6 +45,14 @@ public class VaReqRepository {
 		insert.execute();
 		return vaReqId;
 	}
+	public boolean orgExists(String orgCode) {
+		return db.fetchExists(db.selectOne().from(ORG).where(ORG.CODE.eq(orgCode)));
+	}
+
+	public boolean banksExist(List<String> bankCodes) {
+		return db.fetchCount(db.selectFrom(BANK).where(BANK.CODE.in(bankCodes))) == new HashSet<>(bankCodes).size();
+	}
+
 	public void markCompleted(Long reqId) {
 		db.update(VA_REQ)
 			.set(VA_REQ.STATUS, ReqStatus.COMPLETED.name())
