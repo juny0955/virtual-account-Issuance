@@ -32,6 +32,9 @@ public class GeneralVaService {
 
 	@Transactional
 	public IssueResult issue(IssueGeneralVaRequest request) {
+		if (!vaReqRepository.orgExists(request.orgCd()) || !vaReqRepository.banksExist(request.bankCodes())) {
+			throw new VaException(ErrorCode.INVALID_REQUEST, ErrorCode.INVALID_REQUEST.display());
+		}
 		Long vaReqId = vaReqRepository.save(VaReq.newGeneral(request.orgCd(), request.bankCodes()));
 		Long groupId = vaGroupRepository.save(VaGroup.newGeneral(vaReqId));
 
