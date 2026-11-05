@@ -3,3 +3,6 @@ spring:
     name: batch
   config:
     import: classpath:persistence.yaml
+  batch:
+    jdbc:
+      initialize-schema: never
