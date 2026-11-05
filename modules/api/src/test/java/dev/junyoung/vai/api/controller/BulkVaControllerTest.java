@@ -22,6 +22,7 @@ class BulkVaControllerTest {
 
     @BeforeEach
     void setup() {
+        when(repository.save(any())).thenReturn(new VaReqRepository.SaveResult(1L, true));
         when(repository.orgExists("T0001")).thenReturn(true);
         when(repository.banksExist(List.of("902", "901"))).thenReturn(true);
         mvc = MockMvcBuilders.standaloneSetup(new BulkVaController(new BulkVaService(repository)))
@@ -30,13 +31,13 @@ class BulkVaControllerTest {
 
     @Test
     void acceptsValidRequestWithoutBody() throws Exception {
-        mvc.perform(post("/api/v1/bulk").contentType(MediaType.APPLICATION_JSON)
+        mvc.perform(post("/api/v1/bulk").header("Idempotency-Key", "test-key").contentType(MediaType.APPLICATION_JSON)
                 .content("""
                     {"orgCd":"T0001","bankCodes":["902","901"],"qty":200000}
                     """))
             .andExpect(status().isAccepted()).andExpect(content().string(""));
         verify(repository).save(argThat(req -> req.type().name().equals("BULK")
-            && req.status().name().equals("PENDING") && req.qty() == 200000
+            && req.status().name().equals("PENDING") && req.clientKey().equals("test-key") && req.qty() == 200000
             && req.bankCodes().equals(List.of("902", "901"))));
     }
 
@@ -52,7 +53,7 @@ class BulkVaControllerTest {
             "{\"orgCd\":\"T0001\",\"bankCodes\":[\"901\"],\"qty\":0}",
             "{\"orgCd\":\"T0001\",\"bankCodes\":[\"901\"],\"qty\":-1}",
             "{\"orgCd\":\"T0001\",\"bankCodes\":[" + "\"901\",".repeat(20) + "\"902\"],\"qty\":1}")) {
-            mvc.perform(post("/api/v1/bulk").contentType(MediaType.APPLICATION_JSON).content(body))
+            mvc.perform(post("/api/v1/bulk").header("Idempotency-Key", "test-key").contentType(MediaType.APPLICATION_JSON).content(body))
                 .andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("INVALID_REQUEST"));
         }
         verifyNoInteractions(repository);
@@ -63,10 +64,23 @@ class BulkVaControllerTest {
         for (String body : List.of(
             "{\"orgCd\":\"T9999\",\"bankCodes\":[\"901\"],\"qty\":1}",
             "{\"orgCd\":\"T0001\",\"bankCodes\":[\"999\"],\"qty\":1}")) {
-            mvc.perform(post("/api/v1/bulk").contentType(MediaType.APPLICATION_JSON).content(body))
+            mvc.perform(post("/api/v1/bulk").header("Idempotency-Key", "test-key").contentType(MediaType.APPLICATION_JSON).content(body))
                 .andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("INVALID_REQUEST"));
         }
         verify(repository, never()).save(any());
     }
 
+
+    @Test
+    void rejectsInvalidClientKeys() throws Exception {
+        String body = "{\"orgCd\":\"T0001\",\"bankCodes\":[\"902\",\"901\"],\"qty\":1}";
+        mvc.perform(post("/api/v1/bulk").contentType(MediaType.APPLICATION_JSON).content(body))
+            .andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("INVALID_REQUEST"));
+        for (String key : List.of("", "   ", "x".repeat(101))) {
+            mvc.perform(post("/api/v1/bulk").header("Idempotency-Key", key)
+                    .contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("INVALID_REQUEST"));
+        }
+        verifyNoInteractions(repository);
+    }
 }

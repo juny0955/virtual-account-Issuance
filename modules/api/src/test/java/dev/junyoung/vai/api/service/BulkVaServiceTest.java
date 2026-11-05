@@ -17,6 +17,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import dev.junyoung.vai.api.controller.dto.IssueBulkVaRequest;
 import dev.junyoung.vai.api.repository.VaReqRepository;
 import dev.junyoung.vai.api.error.VaException;
+import dev.junyoung.vai.api.error.ErrorCode;
 
 @EnabledIfEnvironmentVariable(named = "VAI_TEST_DB_URL", matches = ".+")
 @SpringBootTest(properties = {
@@ -38,7 +39,7 @@ class BulkVaServiceTest {
 
     @Test
     void savesPendingRequestAndOrderedBanksWithoutAllocations() {
-        service.issue(new IssueBulkVaRequest("T0001", List.of("902", "901"), 200000));
+        service.issue(new IssueBulkVaRequest("T0001", List.of("902", "901"), 200000), "test-key");
         var req = db.fetchOne("SELECT id, type, status, qty FROM va_req");
         assertNotNull(req);
         assertEquals("BULK", req.get("type"));
@@ -51,8 +52,8 @@ class BulkVaServiceTest {
 
     @Test
     void rejectsUnknownOrganizationOrBankWithoutSaving() {
-        assertThrows(VaException.class, () -> service.issue(new IssueBulkVaRequest("T9999", List.of("901"), 1)));
-        assertThrows(VaException.class, () -> service.issue(new IssueBulkVaRequest("T0001", List.of("901", "999"), 1)));
+        assertThrows(VaException.class, () -> service.issue(new IssueBulkVaRequest("T9999", List.of("901"), 1), "test-key"));
+        assertThrows(VaException.class, () -> service.issue(new IssueBulkVaRequest("T0001", List.of("901", "999"), 1), "test-key"));
         assertEquals(0, db.fetchCount(dev.junyoung.vai.persistence.jooq.Tables.VA_REQ));
     }
 
@@ -62,8 +63,20 @@ class BulkVaServiceTest {
             invocation.callRealMethod();
             throw new IllegalStateException("simulated failure");
         }).when(repository).save(any());
-        assertThrows(IllegalStateException.class, () -> service.issue(new IssueBulkVaRequest("T0001", List.of("901"), 1)));
+        assertThrows(IllegalStateException.class, () -> service.issue(new IssueBulkVaRequest("T0001", List.of("901"), 1), "test-key"));
         assertEquals(0, db.fetchCount(dev.junyoung.vai.persistence.jooq.Tables.VA_REQ));
         assertEquals(0, db.fetchCount(dev.junyoung.vai.persistence.jooq.Tables.VA_REQ_BANK));
+    }
+
+    @Test
+    void retryDoesNotCreateAnotherRequestAndChangedQuantityConflicts() {
+        var request = new IssueBulkVaRequest("T0001", List.of("901"), 2);
+        service.issue(request, "bulk-key");
+        service.issue(request, "bulk-key");
+        assertEquals("bulk-key", db.fetchValue("SELECT client_key FROM va_req"));
+        var conflict = assertThrows(VaException.class, () -> service.issue(
+            new IssueBulkVaRequest("T0001", List.of("901"), 3), "bulk-key"));
+        assertEquals(ErrorCode.IDEMPOTENCY_KEY_CONFLICT, conflict.errorCode());
+        assertEquals(1, db.fetchCount(dev.junyoung.vai.persistence.jooq.Tables.VA_REQ));
     }
 }

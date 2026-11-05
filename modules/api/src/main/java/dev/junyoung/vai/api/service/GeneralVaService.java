@@ -31,11 +31,17 @@ public class GeneralVaService {
 	private final VaAllocRepository vaAllocRepository;
 
 	@Transactional
-	public IssueResult issue(IssueGeneralVaRequest request) {
+	public IssueResult issue(IssueGeneralVaRequest request, String clientKey) {
 		if (!vaReqRepository.orgExists(request.orgCd()) || !vaReqRepository.banksExist(request.bankCodes())) {
 			throw new VaException(ErrorCode.INVALID_REQUEST, ErrorCode.INVALID_REQUEST.display());
 		}
-		Long vaReqId = vaReqRepository.save(VaReq.newGeneral(request.orgCd(), request.bankCodes()));
+		VaReq vaReq = VaReq.newGeneral(request.orgCd(), clientKey, request.bankCodes());
+		var saved = vaReqRepository.save(vaReq);
+		Long vaReqId = saved.requestId();
+		if (!saved.created()) {
+			return IssueResult.of(vaReqId, request.bankCodes(), vaAllocRepository.findAccountsByRequestId(vaReqId));
+		}
+
 		Long groupId = vaGroupRepository.save(VaGroup.newGeneral(vaReqId));
 
 		Map<String, String> accounts = new HashMap<>();

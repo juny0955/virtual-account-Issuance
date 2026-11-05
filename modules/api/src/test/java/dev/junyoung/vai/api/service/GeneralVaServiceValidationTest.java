@@ -28,7 +28,7 @@ class GeneralVaServiceValidationTest {
         for (var request : List.of(
                 new IssueGeneralVaRequest("T9999", List.of("901")),
                 new IssueGeneralVaRequest("T0001", List.of("999")))) {
-            var exception = assertThrows(VaException.class, () -> service.issue(request));
+            var exception = assertThrows(VaException.class, () -> service.issue(request, "test-key"));
             assertEquals(ErrorCode.INVALID_REQUEST, exception.errorCode());
         }
         verify(requests, never()).save(any());

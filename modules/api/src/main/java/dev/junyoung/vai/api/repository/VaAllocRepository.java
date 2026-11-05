@@ -3,6 +3,7 @@ package dev.junyoung.vai.api.repository;
 import static dev.junyoung.vai.persistence.jooq.Tables.VA_ALLOC;
 
 import java.util.List;
+import java.util.Map;
 
 import org.jooq.DSLContext;
 import org.jooq.impl.DSL;
@@ -15,6 +16,11 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class VaAllocRepository {
 	private final DSLContext db;
+
+	public Map<String, String> findAccountsByRequestId(Long reqId) {
+		return db.select(VA_ALLOC.BANK_CD, VA_ALLOC.VA_NO).from(VA_ALLOC)
+			.where(VA_ALLOC.REQ_ID.eq(reqId)).fetchMap(VA_ALLOC.BANK_CD, VA_ALLOC.VA_NO);
+	}
 
 	public void saveAll(List<VaAlloc> allocs) {
 		if (allocs.isEmpty()) {

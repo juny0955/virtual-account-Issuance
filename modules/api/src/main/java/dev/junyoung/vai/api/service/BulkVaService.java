@@ -16,10 +16,11 @@ public class BulkVaService {
     private final VaReqRepository vaReqRepository;
 
     @Transactional
-    public void issue(IssueBulkVaRequest request) {
+    public void issue(IssueBulkVaRequest request, String clientKey) {
         if (!vaReqRepository.orgExists(request.orgCd()) || !vaReqRepository.banksExist(request.bankCodes())) {
             throw new VaException(ErrorCode.INVALID_REQUEST, ErrorCode.INVALID_REQUEST.display());
         }
-        vaReqRepository.save(VaReq.newBulk(request.orgCd(), request.qty(), request.bankCodes()));
+        var vaReq = VaReq.newBulk(request.orgCd(), clientKey, request.qty(), request.bankCodes());
+        vaReqRepository.save(vaReq);
     }
 }
